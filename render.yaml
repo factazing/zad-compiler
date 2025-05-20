@@ -18,3 +18,7 @@ services:
       minInstances: 1
       maxInstances: 1
     healthCheckPath: /health
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock

@@ -102,81 +102,35 @@ const MAX_EXECUTION_TIME = 30000;
 async function ensureDockerImage(ws, dockerImage) {
   return new Promise((resolve, reject) => {
     try {
-      // Use execSync to check if image exists to avoid nodemon file watching issues
+      // Use execSync to check if image exists
       const checkImageCmd = `docker image inspect ${dockerImage} > /dev/null 2>&1 || echo "not_found"`;
       const result = require('child_process').execSync(checkImageCmd, { encoding: 'utf8' });
       
       if (result.trim() === 'not_found') {
-        // Image doesn't exist, need to pull it
-        console.log(`Docker image ${dockerImage} not found locally, pulling...`);
-        
-        // Notify client that we're pulling the image
+        // In production, we expect images to be pre-pulled
+        console.error(`Docker image ${dockerImage} not found`);
         ws.send(JSON.stringify({
-          type: 'output',
-          data: `Setting the environment for ${dockerImage} Please wait...\r\n`
+          type: 'error',
+          data: `Environment not available. Please try again later or contact support.\r\n`
         }));
-        
-        // Use exec instead of spawn to avoid nodemon watching the process
-        const { exec } = require('child_process');
-        const pullProcess = exec(`docker pull ${dockerImage}`, { maxBuffer: 10 * 1024 * 1024 });
-        
-        // Track pull progress
-        let pullOutput = '';
-        
-        pullProcess.stdout.on('data', (data) => {
-          pullOutput += data;
-          // Send progress updates less frequently to avoid overwhelming the client
-          ws.send(JSON.stringify({
-            type: 'output',
-            data: `${data.toString()}`
-          }));
-        });
-        
-        pullProcess.stderr.on('data', (data) => {
-          pullOutput += data;
-          // Send progress updates less frequently to avoid overwhelming the client
-          ws.send(JSON.stringify({
-            type: 'output',
-            data: `${data.toString()}`
-          }));
-        });
-        
-        pullProcess.on('close', (pullCode) => {
-          if (pullCode === 0) {
-            console.log(`Successfully pulled Docker image ${dockerImage}`);
-            ws.send(JSON.stringify({
-              type: 'output',
-              data: `\r\nSuccessfully pulled Docker image ${dockerImage}. Running your code...\r\n`
-            }));
-            resolve();
-          } else {
-            console.error(`Failed to pull Docker image ${dockerImage}`);
-            ws.send(JSON.stringify({
-              type: 'error',
-              data: `Failed to pull Docker image ${dockerImage}. Error code: ${pullCode}\r\n`
-            }));
-            reject(new Error(`Failed to pull Docker image ${dockerImage}`));
-          }
-        });
-        
-        pullProcess.on('error', (err) => {
-          console.error(`Error pulling Docker image: ${err.message}`);
-          ws.send(JSON.stringify({
-            type: 'error',
-            data: `Error pulling Docker image: ${err.message}\r\n`
-          }));
-          reject(err);
-        });
+        reject(new Error(`Docker image ${dockerImage} not found`));
       } else {
         // Image exists locally
         console.log(`Docker image ${dockerImage} found locally`);
+        
+        // Send ready message to client
+        ws.send(JSON.stringify({
+          type: 'output',
+          data: `Environment ready. Running your code...\r\n`
+        }));
+        
         resolve();
       }
     } catch (err) {
       console.error(`Error in ensureDockerImage: ${err.message}`);
       ws.send(JSON.stringify({
         type: 'error',
-        data: `Error checking Docker image: ${err.message}\r\n`
+        data: `Error checking environment: ${err.message}\r\n`
       }));
       reject(err);
     }

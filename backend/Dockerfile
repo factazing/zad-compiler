@@ -20,6 +20,12 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y docker-ce-cli
 
+# Pre-pull all required Docker images
+RUN docker pull python:3.9-slim && \
+    docker pull node:16-alpine && \
+    docker pull openjdk:11-slim && \
+    docker pull gcc:11.2
+
 # Create app directory
 WORKDIR /usr/src/app
 
@@ -33,8 +39,8 @@ COPY . .
 # Create temp directory for code execution
 RUN mkdir -p temp
 
-# Expose port
-EXPOSE 3001
+# Expose port (use PORT from environment variable)
+EXPOSE ${PORT:-3001}
 
 # Start the server
 CMD ["npm", "start"]
