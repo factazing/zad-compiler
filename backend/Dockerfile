@@ -32,5 +32,5 @@ RUN mkdir -p temp
 # Expose port (use PORT from environment variable)
 EXPOSE ${PORT:-3001}
 
-# Start the server
-CMD ["npm", "start"]
+# Start script
+CMD ["./start.sh"]

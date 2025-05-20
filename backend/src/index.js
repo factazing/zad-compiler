@@ -102,18 +102,55 @@ const MAX_EXECUTION_TIME = 30000;
 async function ensureDockerImage(ws, dockerImage) {
   return new Promise((resolve, reject) => {
     try {
-      // Use execSync to check if image exists
+      // First check if image exists
       const checkImageCmd = `docker image inspect ${dockerImage} > /dev/null 2>&1 || echo "not_found"`;
       const result = require('child_process').execSync(checkImageCmd, { encoding: 'utf8' });
       
       if (result.trim() === 'not_found') {
-        // In production, we expect images to be pre-pulled
-        console.error(`Docker image ${dockerImage} not found`);
+        console.log(`Docker image ${dockerImage} not found locally, attempting to pull...`);
+        
+        // Notify client that we're pulling the image
         ws.send(JSON.stringify({
-          type: 'error',
-          data: `Environment not available. Please try again later or contact support.\r\n`
+          type: 'output',
+          data: `Required environment not found. Setting up ${dockerImage} (this may take a moment)...\r\n`
         }));
-        reject(new Error(`Docker image ${dockerImage} not found`));
+        
+        // Try to pull the image
+        const { exec } = require('child_process');
+        const pullProcess = exec(`docker pull ${dockerImage}`, { maxBuffer: 10 * 1024 * 1024 });
+        
+        pullProcess.stdout.on('data', (data) => {
+          ws.send(JSON.stringify({
+            type: 'output',
+            data: `Setup progress: ${data.toString()}`
+          }));
+        });
+        
+        pullProcess.stderr.on('data', (data) => {
+          ws.send(JSON.stringify({
+            type: 'output',
+            data: `Setup info: ${data.toString()}`
+          }));
+        });
+        
+        pullProcess.on('close', (pullCode) => {
+          if (pullCode === 0) {
+            console.log(`Successfully pulled Docker image ${dockerImage}`);
+            ws.send(JSON.stringify({
+              type: 'output',
+              data: `Environment is ready. Running your code...\r\n`
+            }));
+            resolve();
+          } else {
+            console.error(`Failed to pull Docker image ${dockerImage}`);
+            reject(new Error(`Failed to set up the required environment. Please try again later.`));
+          }
+        });
+        
+        pullProcess.on('error', (err) => {
+          console.error(`Error pulling Docker image: ${err.message}`);
+          reject(new Error(`Failed to set up the required environment: ${err.message}`));
+        });
       } else {
         // Image exists locally
         console.log(`Docker image ${dockerImage} found locally`);
@@ -128,11 +165,7 @@ async function ensureDockerImage(ws, dockerImage) {
       }
     } catch (err) {
       console.error(`Error in ensureDockerImage: ${err.message}`);
-      ws.send(JSON.stringify({
-        type: 'error',
-        data: `Error checking environment: ${err.message}\r\n`
-      }));
-      reject(err);
+      reject(new Error(`Failed to check environment status: ${err.message}`));
     }
   });
 }
