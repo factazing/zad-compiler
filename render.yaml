@@ -2,8 +2,9 @@ services:
   - type: web
     name: zad-compiler-backend
     env: docker
+    rootDir: backend
     dockerCommand: npm start
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,6 +18,3 @@ services:
       minInstances: 1
       maxInstances: 1
     healthCheckPath: /health
-    buildFilter:
-      paths:
-        - backend/**/*
