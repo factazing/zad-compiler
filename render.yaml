@@ -3,7 +3,7 @@ services:
     name: zad-compiler-backend
     env: docker
     rootDir: backend
-    dockerCommand: npm start
+    dockerCommand: ./start.sh
     dockerfilePath: Dockerfile
     envVars:
       - key: NODE_ENV
@@ -24,3 +24,4 @@ services:
       - type: bind
         source: /var/run/docker.sock
         target: /var/run/docker.sock
+        mode: "0666"
