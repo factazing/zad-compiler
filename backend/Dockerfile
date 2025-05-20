@@ -7,7 +7,11 @@ RUN apt-get update && \
     ca-certificates \
     curl \
     gnupg \
-    lsb-release && \
+    lsb-release \
+    build-essential \
+    python3 \
+    make \
+    g++ && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
     echo \
