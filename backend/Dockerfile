@@ -1,17 +1,13 @@
 FROM node:16-slim
 
-# Install Docker and other dependencies
+# Install Docker CLI and other dependencies
 RUN apt-get update && \
     apt-get install -y \
     apt-transport-https \
     ca-certificates \
     curl \
     gnupg \
-    lsb-release \
-    build-essential \
-    python3 \
-    make \
-    g++ && \
+    lsb-release && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
     echo \
@@ -19,12 +15,6 @@ RUN apt-get update && \
     $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
     apt-get update && \
     apt-get install -y docker-ce-cli
-
-# Pre-pull all required Docker images
-RUN docker pull python:3.9-slim && \
-    docker pull node:16-alpine && \
-    docker pull openjdk:11-slim && \
-    docker pull gcc:11.2
 
 # Create app directory
 WORKDIR /usr/src/app
